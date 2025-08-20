@@ -103,7 +103,7 @@ public class TransactionBatch {
         let body = try JSONEncoder().encode(request)
 
         let (_, data) = try await client.fetch(
-            path: "/api/transactions/v1/execute",
+            path: "/api/transaction/v1/execute",
             method: "POST",
             body: body
         )

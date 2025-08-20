@@ -157,7 +157,7 @@ namespace TrailBase.Client
         {
             var request = new TransactionRequest { Operations = _operations };
             var response = await _client.Fetch(
-                "/api/transactions/v1/execute",
+                "/api/transaction/v1/execute",
                 HttpMethod.Post,
                 JsonContent.Create(request),
                 null

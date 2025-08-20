@@ -750,7 +750,7 @@ impl TransactionBatch {
     let response = self
       .client
       .fetch(
-        "/api/transactions/v1/execute",
+        "/api/transaction/v1/execute",
         Method::POST,
         Some(&request),
         None,

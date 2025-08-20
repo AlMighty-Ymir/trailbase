@@ -121,7 +121,7 @@ class TransactionBatch implements ITransactionBatch {
   Future<List<String>> send() async {
     final request = TransactionRequest(operations: _operations);
     final response = await _client.fetch(
-      'api/transactions/v1/execute',
+      'api/transaction/v1/execute',
       method: 'POST',
       data: request.toJson(),
     );

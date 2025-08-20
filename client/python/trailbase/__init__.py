@@ -328,7 +328,7 @@ class TransactionBatch:
     def send(self) -> List[str]:
         request: TransactionRequest = {"operations": self._operations}
         response = self._client.fetch(
-            "/api/transactions/v1/execute",
+            "/api/transaction/v1/execute",
             method="POST",
             data=request,
         )

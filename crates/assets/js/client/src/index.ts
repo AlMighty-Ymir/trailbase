@@ -821,7 +821,7 @@ export class TransactionBatch {
   }
 
   async send(): Promise<string[]> {
-    const response = await this.client.fetch("/api/transactions/v1/execute", {
+    const response = await this.client.fetch("/api/transaction/v1/execute", {
       method: "POST",
       body: JSON.stringify({ operations: this.operations }),
       headers: jsonContentTypeHeader,
