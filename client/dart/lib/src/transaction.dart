@@ -86,13 +86,27 @@ class TransactionRequest {
 }
 
 class TransactionResponse {
-  List<String> ids;
+  final List<String> _ids;
 
-  TransactionResponse({required this.ids});
+  const TransactionResponse(this._ids);
 
-  factory TransactionResponse.fromJson(Map<String, dynamic> json) {
-    return TransactionResponse(ids: (json['ids'] as List).cast<String>());
+  TransactionResponse.fromJson(Map<String, dynamic> json)
+    : _ids = (json['ids'] as List).cast<String>();
+
+  List<RecordId> toRecordIds() {
+    return _ids.map(toRecordId).toList();
   }
+
+  static RecordId toRecordId(String id) {
+    final intId = int.tryParse(id);
+    if (intId != null) {
+      return _IntegerRecordId(intId);
+    }
+    return _UuidRecordId(id);
+  }
+
+  @override
+  String toString() => _ids.toString();
 }
 
 abstract class ITransactionBatch {
@@ -118,7 +132,7 @@ class TransactionBatch implements ITransactionBatch {
   }
 
   @override
-  Future<List<String>> send() async {
+  Future<List<RecordId>> send() async {
     final request = TransactionRequest(operations: _operations);
     final response = await _client.fetch(
       'api/transaction/v1/execute',
@@ -131,7 +145,7 @@ class TransactionBatch implements ITransactionBatch {
     }
 
     final result = TransactionResponse.fromJson(response.data);
-    return result.ids;
+    return result.toRecordIds();
   }
 
   void addOperation(Operation operation) {

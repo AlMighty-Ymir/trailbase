@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import { expect, test } from "vitest";
-import { initClient, urlSafeBase64Encode, TransactionBatch } from "../../src/index";
+import { initClient, urlSafeBase64Encode } from "../../src/index";
 import type { Client, Event } from "../../src/index";
 import { status } from "http-status";
 import { v7 as uuidv7, parse as uuidParse } from "uuid";
@@ -358,7 +358,7 @@ test("transaction tests", async () => {
 
     const batch = client.transaction();
     const updatedRecord = { text_not_null: `ts transaction update test modified: =?&${now}` };
-    batch.api("simple_strict_table").update(id as string, updatedRecord);
+    batch.api("simple_strict_table").update(id, updatedRecord);
 
     await batch.send();
     const readRecord = await api.read(id);
@@ -372,7 +372,7 @@ test("transaction tests", async () => {
     const id = await api.create(record);
 
     const batch = client.transaction();
-    batch.api("simple_strict_table").delete(id as string);
+    batch.api("simple_strict_table").delete(id);
 
     await batch.send();
     await expect(api.read(id)).rejects.toThrow();
