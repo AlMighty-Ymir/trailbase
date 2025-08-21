@@ -26,13 +26,13 @@ public enum Operation: Codable {
         case let .update(apiName, recordId, value):
             var updateContainer = container.nestedContainer(keyedBy: CodingKeys.self, forKey: .update)
             try updateContainer.encode(apiName, forKey: .apiName)
-            try updateContainer.encode(recordId.id, forKey: .recordId)
+            try updateContainer.encode("\(recordId)", forKey: .recordId)
             try updateContainer.encode(value, forKey: .value)
 
-        case let .delete(apiName, recordId):
+        case let .delete(apiName, recordId):  
             var deleteContainer = container.nestedContainer(keyedBy: CodingKeys.self, forKey: .delete)
             try deleteContainer.encode(apiName, forKey: .apiName)
-            try deleteContainer.encode(recordId.id, forKey: .recordId)
+            try deleteContainer.encode("\(recordId)", forKey: .recordId)
         }
     }
 
@@ -48,17 +48,16 @@ public enum Operation: Codable {
             let apiName = try updateContainer.decode(String.self, forKey: .apiName)
             let recordIdString = try updateContainer.decode(String.self, forKey: .recordId)
             let value = try updateContainer.decode([String: AnyCodable].self, forKey: .value)
-            self = .update(apiName: apiName, recordId: RecordId(id: recordIdString), value: value)
+            self = .update(apiName: apiName, recordId: RecordId.string(recordIdString), value: value)
 
         } else if let deleteContainer = try? container.nestedContainer(keyedBy: CodingKeys.self, forKey: .delete) {
             let apiName = try deleteContainer.decode(String.self, forKey: .apiName)
-            let recordId = try deleteContainer.decode(String.self, forKey: .recordId)
-            self = .delete(apiName: apiName, recordId: recordId)
+            let recordIdString = try deleteContainer.decode(String.self, forKey: .recordId)
+            self = .delete(apiName: apiName, recordId: RecordId.string(recordIdString))
 
         } else {
-            throw DecodingError.dataCorruptedError(
-                in: container,
-                debugDescription: "Invalid Operation type"
+            throw DecodingError.dataCorrupted(
+                DecodingError.Context(codingPath: container.codingPath, debugDescription: "Invalid Operation type")
             )
         }
     }
@@ -73,16 +72,10 @@ public struct TransactionRequest: Codable {
 }
 
 public struct TransactionResponse: Codable {
-    public var ids: [RecordId] = []
+    public var ids: [String] = []
 
     private enum CodingKeys: String, CodingKey {
         case ids = "ids"
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let idStrings = try container.decode([String].self, forKey: .ids)
-        self.ids = idStrings.map { RecordId(id: $0) }
     }
 }
 
@@ -109,7 +102,7 @@ public class TransactionBatch {
         )
 
         let response = try JSONDecoder().decode(TransactionResponse.self, from: data)
-        return response.ids
+        return response.ids.map { RecordId.string($0) }
     }
 
     internal func addOperation(_ operation: Operation) {

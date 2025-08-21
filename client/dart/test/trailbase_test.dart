@@ -23,10 +23,10 @@ class SimpleStrict {
   });
 
   SimpleStrict.fromJson(Map<String, dynamic> json)
-    : id = json['id'],
-      textNull = json['text_null'],
-      textDefault = json['text_default'],
-      textNotNull = json['text_not_null'];
+      : id = json['id'],
+        textNull = json['text_null'],
+        textDefault = json['text_default'],
+        textNotNull = json['text_not_null'];
 
   @override
   bool operator ==(Object other) {
@@ -53,9 +53,9 @@ class Author {
   final String name;
 
   Author.fromJson(Map<String, dynamic> json)
-    : id = json['id'],
-      user = json['user'],
-      name = json['name'];
+      : id = json['id'],
+        user = json['user'],
+        name = json['name'];
 
   @override
   bool operator ==(Object rhs) {
@@ -83,10 +83,10 @@ class Post {
   final String body;
 
   Post.fromJson(Map<String, dynamic> json)
-    : id = json['id'],
-      author = json['author'],
-      title = json['title'],
-      body = json['body'];
+      : id = json['id'],
+        author = json['author'],
+        title = json['title'],
+        body = json['body'];
 
   @override
   bool operator ==(Object rhs) {
@@ -116,21 +116,21 @@ class Comment {
     Map<String, dynamic>? post,
     required String authorId,
     Map<String, dynamic>? authorProfile,
-  }) : post = (postId, post != null ? Post.fromJson(post) : null),
-       author = (
-         authorId,
-         authorProfile != null ? Author.fromJson(authorProfile) : null,
-       );
+  })  : post = (postId, post != null ? Post.fromJson(post) : null),
+        author = (
+          authorId,
+          authorProfile != null ? Author.fromJson(authorProfile) : null
+        );
 
   Comment.fromJson(Map<String, dynamic> json)
-    : this(
-        id: json['id'],
-        body: json['body'],
-        postId: json['post']['id'],
-        post: json['post']['data'],
-        authorId: json['author']['id'],
-        authorProfile: json['author']['data'],
-      );
+      : this(
+          id: json['id'],
+          body: json['body'],
+          postId: json['post']['id'],
+          post: json['post']['data'],
+          authorId: json['author']['id'],
+          authorProfile: json['author']['data'],
+        );
 
   @override
   bool operator ==(Object rhs) {
@@ -157,16 +157,11 @@ Future<Client> connect() async {
 }
 
 Future<Process> initTrailBase() async {
-  final result = await Process.run(
-    'cargo',
-    ['build'],
-    stdoutEncoding: utf8,
-    stderrEncoding: utf8,
-  );
+  final result = await Process.run('cargo', ['build'],
+      stdoutEncoding: utf8, stderrEncoding: utf8);
   if (result.exitCode > 0) {
     throw Exception(
-      'Cargo build failed.\n\nstdout: ${result.stdout}\n\nstderr: ${result.stderr}\n',
-    );
+        'Cargo build failed.\n\nstdout: ${result.stdout}\n\nstderr: ${result.stderr}\n');
   }
 
   // Relative to CWD.
@@ -185,9 +180,8 @@ Future<Process> initTrailBase() async {
   final dio = Dio();
   for (int i = 0; i < 100; ++i) {
     try {
-      final response = await dio.fetch(
-        RequestOptions(path: 'http://${address}/api/healthcheck'),
-      );
+      final response = await dio
+          .fetch(RequestOptions(path: 'http://${address}/api/healthcheck'));
       if (response.statusCode == 200) {
         return process;
       }
@@ -195,10 +189,8 @@ Future<Process> initTrailBase() async {
       print('Trying to connect to TrailBase');
     }
 
-    if (await process.exitCode.timeout(
-          Duration(milliseconds: 500),
-          onTimeout: () => -1,
-        ) >=
+    if (await process.exitCode
+            .timeout(Duration(milliseconds: 500), onTimeout: () => -1) >=
         0) {
       break;
     }
@@ -288,37 +280,29 @@ Future<void> main() async {
       }
 
       {
-        final recordsAsc =
-            (await api.list(
-              order: ['+text_not_null'],
-              filters: [
-                Filter(
-                  column: 'text_not_null',
-                  op: CompareOp.like,
-                  value: '% =?&${now}',
-                ),
-              ],
-            )).records;
-        expect(
-          recordsAsc.map((el) => el['text_not_null']),
-          orderedEquals(messages),
-        );
+        final recordsAsc = (await api.list(
+          order: ['+text_not_null'],
+          filters: [
+            Filter(
+                column: 'text_not_null',
+                op: CompareOp.like,
+                value: '% =?&${now}')
+          ],
+        ))
+            .records;
+        expect(recordsAsc.map((el) => el['text_not_null']),
+            orderedEquals(messages));
 
-        final recordsDesc =
-            (await api.list(
-              order: ['-text_not_null'],
-              filters: [
-                Filter(
-                  column: 'text_not_null',
-                  op: CompareOp.like,
-                  value: '%${now}',
-                ),
-              ],
-            )).records;
-        expect(
-          recordsDesc.map((el) => el['text_not_null']).toList().reversed,
-          orderedEquals(messages),
-        );
+        final recordsDesc = (await api.list(
+          order: ['-text_not_null'],
+          filters: [
+            Filter(
+                column: 'text_not_null', op: CompareOp.like, value: '%${now}')
+          ],
+        ))
+            .records;
+        expect(recordsDesc.map((el) => el['text_not_null']).toList().reversed,
+            orderedEquals(messages));
       }
 
       {
@@ -327,10 +311,7 @@ Future<void> main() async {
           order: ['-text_not_null'],
           filters: [
             Filter(
-              column: 'text_not_null',
-              op: CompareOp.like,
-              value: '%${now}',
-            ),
+                column: 'text_not_null', op: CompareOp.like, value: '%${now}')
           ],
           count: true,
         ));
@@ -373,9 +354,10 @@ Future<void> main() async {
       }
 
       {
-        final comment = Comment.fromJson(
-          await api.read(RecordId.integer(1), expand: ['post']),
-        );
+        final comment = Comment.fromJson(await api.read(
+          RecordId.integer(1),
+          expand: ['post'],
+        ));
 
         expect(comment.id, equals(1));
         expect(comment.body, equals('first comment'));
@@ -427,45 +409,42 @@ Future<void> main() async {
       await api.delete(id);
 
       final eventList =
-          await events
-              .timeout(
-                Duration(seconds: 10),
-                onTimeout: (sink) {
-                  print('Stream timeout');
-                  sink.close();
-                },
-              )
-              .toList();
+          await events.timeout(Duration(seconds: 10), onTimeout: (sink) {
+        print('Stream timeout');
+        sink.close();
+      }).toList();
 
       expect(eventList.length, equals(2));
       expect(eventList[0].runtimeType, equals(UpdateEvent));
       expect(
-        SimpleStrict.fromJson(eventList[0].value()!),
-        SimpleStrict(id: id.toString(), textNotNull: updatedMessage),
-      );
+          SimpleStrict.fromJson(eventList[0].value()!),
+          SimpleStrict(
+            id: id.toString(),
+            textNotNull: updatedMessage,
+          ));
 
       expect(eventList[1].runtimeType, equals(DeleteEvent));
       expect(
-        SimpleStrict.fromJson(eventList[1].value()!),
-        SimpleStrict(id: id.toString(), textNotNull: updatedMessage),
-      );
+          SimpleStrict.fromJson(eventList[1].value()!),
+          SimpleStrict(
+            id: id.toString(),
+            textNotNull: updatedMessage,
+          ));
 
       final tableEventList =
-          await tableEvents
-              .timeout(
-                Duration(seconds: 10),
-                onTimeout: (sink) {
-                  print('Stream timeout');
-                  sink.close();
-                },
-              )
-              .toList();
+          await tableEvents.timeout(Duration(seconds: 10), onTimeout: (sink) {
+        print('Stream timeout');
+        sink.close();
+      }).toList();
       expect(tableEventList.length, equals(3));
 
       expect(tableEventList[0].runtimeType, equals(InsertEvent));
       expect(
-        SimpleStrict.fromJson(tableEventList[0].value()!),
-        SimpleStrict(id: id.toString(), textNotNull: createMessage),
+          SimpleStrict.fromJson(tableEventList[0].value()!),
+          SimpleStrict(
+            id: id.toString(),
+            textNotNull: createMessage,
+          ));
       );
     });
 
@@ -500,7 +479,7 @@ Future<void> main() async {
 
       {
         final batch = client.transaction();
-        await batch.api('simple_strict_table').delete(ids[0]);
+        batch.api('simple_strict_table').delete(ids[0]);
         await batch.send();
         expect(() async => await api.read(ids[0]), throwsException);
       }

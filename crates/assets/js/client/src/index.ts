@@ -852,7 +852,10 @@ export class ApiBatch {
     return this.batch;
   }
 
-  update(recordId: string | number, value: Record<string, unknown>): TransactionBatch {
+  update(
+    recordId: string | number,
+    value: Record<string, unknown>,
+  ): TransactionBatch {
     this.batch.addOperation({
       Update: {
         api_name: this.apiName,

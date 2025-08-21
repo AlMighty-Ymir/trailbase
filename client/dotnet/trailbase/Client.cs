@@ -293,9 +293,8 @@ public class Client {
   }
 
   /// <summary>Create a new transaction batch.</summary>  
-  public ITransactionBatch Transaction()  
-  {  
-    return new TransactionBatch(this);  
+  public ITransactionBatch Transaction() {
+    return new TransactionBatch(this);
   }
 
   /// <summary>Log in with the given credentials.</summary>

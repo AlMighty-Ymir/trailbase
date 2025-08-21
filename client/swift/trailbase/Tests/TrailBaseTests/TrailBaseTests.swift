@@ -203,7 +203,7 @@ extension Trait where Self == SetupTrailBaseTrait {
     @Test("Test Transaction") func testTransaction() async throws {
         let client = try await connect()
         let now = NSDate().timeIntervalSince1970
-        
+
         // Test create operation
         let batch = client.transaction()
         let createRecord = [
@@ -214,28 +214,28 @@ extension Trait where Self == SetupTrailBaseTrait {
         // Test actual creation
         let ids: [RecordId] = try await batch.send()
         #expect(ids.count == 1)
-        
+
         // Verify record was created
         let api = client.records("simple_strict_table")
         let createdRecord: SimpleStrict = try await api.read(recordId: ids[0])
         #expect(createdRecord.text_not_null == createRecord["text_not_null"] as? String)
-        
+
         // Test update operation
         let updateBatch = client.transaction()
         let updateRecord = [
             "text_not_null": "swift transaction update test: =?&\(now)"
         ] as [String: Any]
         updateBatch.api(name: "simple_strict_table").update(recordId: ids[0], value: updateRecord)
-        
+
         // Test actual update
         try await updateBatch.send()
         let updatedRecord: SimpleStrict = try await api.read(recordId: ids[0])
         #expect(updatedRecord.text_not_null == updateRecord["text_not_null"] as? String)
-        
+
         // Test delete operation
         let deleteBatch = client.transaction()
         deleteBatch.api(name: "simple_strict_table").delete(recordId: ids[0])
-        
+
         // Test actual deletion
         try await deleteBatch.send()
         do {

@@ -385,7 +385,7 @@ public class Client {
         return state
     }
 
-    fileprivate func fetch(
+    internal func fetch(
         path: String,
         method: String,
         body: Data? = nil,

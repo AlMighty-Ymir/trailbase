@@ -353,11 +353,15 @@ test("transaction tests", async () => {
   // Test transaction with update operation
   {
     const api = client.records("simple_strict_table");
-    const record = { text_not_null: `ts transaction update test original: =?&${now}` };
+    const record = {
+      text_not_null: `ts transaction update test original: =?&${now}`,
+    };
     const id = await api.create(record);
 
     const batch = client.transaction();
-    const updatedRecord = { text_not_null: `ts transaction update test modified: =?&${now}` };
+    const updatedRecord = {
+      text_not_null: `ts transaction update test modified: =?&${now}`,
+    };
     batch.api("simple_strict_table").update(id, updatedRecord);
 
     await batch.send();
@@ -381,12 +385,18 @@ test("transaction tests", async () => {
   // Test transaction with multiple operations
   {
     const batch = client.transaction();
-    
+
     // Add multiple operations in sequence
-    batch.api("simple_strict_table").create({ text_not_null: `ts transaction multi create: =?&${now}` });
-    batch.api("simple_strict_table").update("record1", { text_not_null: `ts transaction multi update: =?&${now}` });
+    batch
+      .api("simple_strict_table")
+      .create({ text_not_null: `ts transaction multi create: =?&${now}` });
+    batch
+      .api("simple_strict_table")
+      .update("record1", {
+        text_not_null: `ts transaction multi update: =?&${now}`,
+      });
     batch.api("simple_strict_table").delete("record2");
-    
+
     // Send the batch and ensure no errors
     const ids = await batch.send();
     expect(ids).toHaveLength(1); // Only create operation returns an ID

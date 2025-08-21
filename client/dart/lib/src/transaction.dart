@@ -1,6 +1,3 @@
-import 'dart:convert';
-
-import 'package:dio/dio.dart' as dio;
 import 'package:trailbase/src/client.dart';
 
 class Operation {
@@ -85,33 +82,9 @@ class TransactionRequest {
   }
 }
 
-class TransactionResponse {
-  final List<String> _ids;
-
-  const TransactionResponse(this._ids);
-
-  TransactionResponse.fromJson(Map<String, dynamic> json)
-    : _ids = (json['ids'] as List).cast<String>();
-
-  List<RecordId> toRecordIds() {
-    return _ids.map(toRecordId).toList();
-  }
-
-  static RecordId toRecordId(String id) {
-    final intId = int.tryParse(id);
-    if (intId != null) {
-      return _IntegerRecordId(intId);
-    }
-    return _UuidRecordId(id);
-  }
-
-  @override
-  String toString() => _ids.toString();
-}
-
 abstract class ITransactionBatch {
   IApiBatch api(String apiName);
-  Future<List<String>> send();
+  Future<List<RecordId>> send();
 }
 
 abstract class IApiBatch {
@@ -144,7 +117,7 @@ class TransactionBatch implements ITransactionBatch {
       throw Exception('${response.data} ${response.statusMessage}');
     }
 
-    final result = TransactionResponse.fromJson(response.data);
+    final result = _ResponseRecordIds.fromJson(response.data);
     return result.toRecordIds();
   }
 

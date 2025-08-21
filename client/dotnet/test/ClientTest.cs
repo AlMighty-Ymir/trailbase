@@ -445,7 +445,7 @@ public class ClientTest : IClassFixture<ClientTestFixture> {
     var now = DateTimeOffset.Now.ToUnixTimeSeconds();
     var suffix = $"{now} {System.Environment.Version} transaction";
     var record = new SimpleStrict(null, null, null, $"C# transaction create test: {suffix}");
-    
+
     batch.Api("simple_strict_table").Create(record, SerializeSimpleStrictContext.Default.SimpleStrict);
 
     // Test actual creation
