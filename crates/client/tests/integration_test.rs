@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use trailbase_client::{
   Client, CompareOp, DbEvent, Filter, ListArguments, ListResponse, Pagination, ReadArguments,
-  transaction::{Operation, TransactionBatch},
+  Operation, TransactionBatch,
 };
 
 struct Server {
