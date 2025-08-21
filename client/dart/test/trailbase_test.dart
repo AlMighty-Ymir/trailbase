@@ -445,7 +445,6 @@ Future<void> main() async {
             id: id.toString(),
             textNotNull: createMessage,
           ));
-      );
     });
 
     test('transaction', () async {

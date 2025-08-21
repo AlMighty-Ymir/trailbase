@@ -292,7 +292,7 @@ public class Client {
     return new RecordApi(this, name);
   }
 
-  /// <summary>Create a new transaction batch.</summary>  
+  /// <summary>Create a new transaction batch.</summary>
   public ITransactionBatch Transaction() {
     return new TransactionBatch(this);
   }

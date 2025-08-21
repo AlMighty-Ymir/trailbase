@@ -145,7 +145,7 @@ namespace TrailBase.Client {
     public async Task<List<string>> SendAsync() {
       var request = new TransactionRequest { Operations = _operations };
       var response = await _client.Fetch(
-          "/api/transaction/v1/execute",
+          "api/transaction/v1/execute",
           HttpMethod.Post,
           JsonContent.Create(request),
           null

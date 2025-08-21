@@ -37,20 +37,20 @@
   env = {
     # Use target for Rust
     # CARGO_BUILD_TARGET = "x86_64-unknown-linux";
-      
+
     # specific paths
     LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
     PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig:${pkgs.sqlite.dev}/lib/pkgconfig";
-      
+
     # OpenSSL configuration
     OPENSSL_DIR = "${pkgs.openssl.dev}";
     OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
     OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include";
     # OPENSSL_STATIC = "1";
-      
+
     # Use bundled SQLite
     LIBSQLITE3_SYS_BUNDLED = "1";
-      
+
     # Bindgen configuration
     BINDGEN_EXTRA_CLANG_ARGS = ''
       -I${pkgs.glibc.dev}/include
@@ -61,16 +61,16 @@
     # Compiler settings
     CC = "${pkgs.stdenv.cc}/bin/gcc";
     CXX = "${pkgs.stdenv.cc}/bin/g++";
-      
-    # Static linking should work better  
+
+    # Static linking should work better
     # RUSTFLAGS = "-C target-feature=+crt-static";
 
   };
   idx = {
     # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [
-      "rust-lang.rust-analyzer"  # Rust language support  
-      "tamasfe.even-better-toml" # TOML support for Cargo.toml  
+      "rust-lang.rust-analyzer"  # Rust language support
+      "tamasfe.even-better-toml" # TOML support for Cargo.toml
     ];
 
     # Enable previews

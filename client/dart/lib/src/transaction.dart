@@ -117,7 +117,7 @@ class TransactionBatch implements ITransactionBatch {
       throw Exception('${response.data} ${response.statusMessage}');
     }
 
-    final result = _ResponseRecordIds.fromJson(response.data);
+    final result = ResponseRecordIds.fromJson(response.data);
     return result.toRecordIds();
   }
 

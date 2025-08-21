@@ -411,7 +411,7 @@ fn integration_test() {
 
   runtime.block_on(subscription_test());
   println!("Ran subscription tests");
-  
+
   runtime.block_on(transaction_tests());
   println!("Ran transaction tests");
 }
@@ -425,7 +425,9 @@ async fn transaction_tests() {
   {
     let mut batch = client.transaction();
     let message = format!("rust transaction create test: {now}");
-    batch.api("simple_strict_table").create(json!({"text_not_null": message}));
+    batch
+      .api("simple_strict_table")
+      .create(json!({"text_not_null": message}));
     let ids = batch.send().await.unwrap();
     assert_eq!(ids.len(), 1);
 
@@ -436,7 +438,9 @@ async fn transaction_tests() {
   {
     let mut batch = client.transaction();
     let message = format!("rust transaction update test: {now}");
-    batch.api("simple_strict_table").update(&ids[0], json!({"text_not_null": message}));
+    batch
+      .api("simple_strict_table")
+      .update(&ids[0], json!({"text_not_null": message}));
     batch.send().await.unwrap();
 
     let record: SimpleStrict = api.read(&ids[0]).await.unwrap();
@@ -445,7 +449,11 @@ async fn transaction_tests() {
 
   {
     let mut batch = client.transaction();
-    batch.api("simple_strict_table").delete(&ids[0]).await.unwrap();
+    batch
+      .api("simple_strict_table")
+      .delete(&ids[0])
+      .await
+      .unwrap();
     batch.send().await.unwrap();
 
     let response = api.read::<SimpleStrict>(&ids[0]).await;

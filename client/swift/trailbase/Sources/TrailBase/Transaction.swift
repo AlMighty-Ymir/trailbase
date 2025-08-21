@@ -29,7 +29,7 @@ public enum Operation: Codable {
             try updateContainer.encode("\(recordId)", forKey: .recordId)
             try updateContainer.encode(value, forKey: .value)
 
-        case let .delete(apiName, recordId):  
+        case let .delete(apiName, recordId):
             var deleteContainer = container.nestedContainer(keyedBy: CodingKeys.self, forKey: .delete)
             try deleteContainer.encode(apiName, forKey: .apiName)
             try deleteContainer.encode("\(recordId)", forKey: .recordId)
@@ -96,7 +96,7 @@ public class TransactionBatch {
         let body = try JSONEncoder().encode(request)
 
         let (_, data) = try await client.fetch(
-            path: "/api/transaction/v1/execute",
+            path: "api/transaction/v1/execute",
             method: "POST",
             body: body
         )

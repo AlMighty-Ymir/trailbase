@@ -303,7 +303,7 @@ class TransactionResponse(typing.TypedDict):
 class ITransactionBatch(Protocol):
     def api(self, api_name: str) -> "IApiBatch": ...
 
-    def send(self) -> List[str]: ...
+    def send(self) -> List[RecordId]: ...
 
 
 class IApiBatch(Protocol):
@@ -326,9 +326,10 @@ class TransactionBatch:
         return ApiBatch(self, api_name)
 
     def send(self) -> List[RecordId]:
-        request = {"operations": [op for op in self._operations]}
+        serialized_ops = [dict(op) for op in self._operations]
+        request = {"operations": serialized_ops}
         response = self._client.fetch(
-            "/api/transaction/v1/execute",
+            "api/transaction/v1/execute",
             method="POST",
             data=request,
         )
@@ -336,7 +337,7 @@ class TransactionBatch:
             raise Exception(f"Transaction failed with status code {response.status_code}: {response.text}")
 
         result: TransactionResponse = response.json()
-        return record_ids_from_json(result["ids"])
+        return record_ids_from_json({"ids": result["ids"]})
 
     def add_operation(self, operation: Operation) -> None:
         """Add an operation to the batch."""

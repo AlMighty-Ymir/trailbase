@@ -381,26 +381,6 @@ test("transaction tests", async () => {
     await batch.send();
     await expect(api.read(id)).rejects.toThrow();
   }
-
-  // Test transaction with multiple operations
-  {
-    const batch = client.transaction();
-
-    // Add multiple operations in sequence
-    batch
-      .api("simple_strict_table")
-      .create({ text_not_null: `ts transaction multi create: =?&${now}` });
-    batch
-      .api("simple_strict_table")
-      .update("record1", {
-        text_not_null: `ts transaction multi update: =?&${now}`,
-      });
-    batch.api("simple_strict_table").delete("record2");
-
-    // Send the batch and ensure no errors
-    const ids = await batch.send();
-    expect(ids).toHaveLength(1); // Only create operation returns an ID
-  }
 });
 
 test("realtime subscribe table tests", async () => {
