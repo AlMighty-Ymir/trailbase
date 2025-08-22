@@ -329,7 +329,7 @@ class TransactionBatch:
         ops_json = [dict(op) for op in self._operations]
 
         response = self._client.fetch(
-            "api/transaction/v1/execute", method="POST", data=json.dumps({"operations": ops_json})
+            "api/transaction/v1/execute", method="POST", data={"operations": ops_json}
         )
         if response.status_code != 200:
             raise Exception(f"Transaction failed with status code {response.status_code}: {response.text}")

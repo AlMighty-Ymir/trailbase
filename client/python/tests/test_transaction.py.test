@@ -34,7 +34,7 @@ def test_transaction_send_serialization():
     assert call_args[1]["method"] == "POST"
     assert (
         call_args[1]["data"]
-        == '{"operations": [{"Create": {"api_name": "test_table", "value": {"name": "test"}}}, {"Update": {"api_name": "test_table", "record_id": "existing-id", "value": {"name": "updated"}}}]}'
+        == {"operations": [{"Create": {"api_name": "test_table", "value": {"name": "test"}}}, {"Update": {"api_name": "test_table", "record_id": "existing-id", "value": {"name": "updated"}}}]}
         is not None
     )
 
