@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use trailbase_client::{
   Client, CompareOp, DbEvent, Filter, ListArguments, ListResponse, Pagination, ReadArguments,
-  transaction::{Operation, TransactionBatch},
+  Operation, TransactionBatch,
 };
 
 struct Server {
@@ -451,9 +451,7 @@ async fn transaction_tests() {
     let mut batch = client.transaction();
     batch
       .api("simple_strict_table")
-      .delete(&ids[0])
-      .await
-      .unwrap();
+      .delete(&ids[0]);
     batch.send().await.unwrap();
 
     let response = api.read::<SimpleStrict>(&ids[0]).await;
