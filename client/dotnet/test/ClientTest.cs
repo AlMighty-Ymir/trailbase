@@ -437,6 +437,8 @@ public class ClientTest : IClassFixture<ClientTestFixture> {
   }
 
   [Fact]
+  [RequiresDynamicCode("Testing dynamic code")]
+  [RequiresUnreferencedCode("testing dynamic code")]
   public async Task TransactionCreateOperationTest() {
     var client = await ClientTest.Connect();
     var batch = client.Transaction();
@@ -457,6 +459,8 @@ public class ClientTest : IClassFixture<ClientTestFixture> {
   }
 
   [Fact]
+  [RequiresDynamicCode("Testing dynamic code")]
+  [RequiresUnreferencedCode("testing dynamic code")]
   public async Task TransactionUpdateOperationTest() {
     var client = await ClientTest.Connect();
     var batch = client.Transaction();
@@ -479,6 +483,8 @@ public class ClientTest : IClassFixture<ClientTestFixture> {
   }
 
   [Fact]
+  [RequiresDynamicCode("Testing dynamic code")]
+  [RequiresUnreferencedCode("testing dynamic code")]
   public async Task TransactionDeleteOperationTest() {
     var client = await ClientTest.Connect();
     var batch = client.Transaction();

@@ -2,188 +2,187 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
-namespace TrailBase.Client {
-  [JsonConverter(typeof(OperationJsonConverter))]
-  public abstract class Operation {
-    [JsonPropertyName("api_name")]
-    public string ApiName { get; set; } = string.Empty;
+namespace TrailBase;
 
-    public static Operation Create(string apiName, Dictionary<string, object> value)
-        => new CreateOperation { ApiName = apiName, Value = value };
+[JsonConverter(typeof(OperationJsonConverter))]
+internal abstract class Operation {
+  [JsonPropertyName("api_name")]
+  public string ApiName { get; set; } = string.Empty;
 
-    public static Operation Update(string apiName, string recordId, Dictionary<string, object> value)
-        => new UpdateOperation { ApiName = apiName, RecordId = recordId, Value = value };
+  public static Operation Create(string apiName, JsonObject value)
+      => new CreateOperation { ApiName = apiName, Value = value };
 
-    public static Operation Delete(string apiName, string recordId)
-        => new DeleteOperation { ApiName = apiName, RecordId = recordId };
-  }
+  public static Operation Update(string apiName, string recordId, JsonObject value)
+      => new UpdateOperation { ApiName = apiName, RecordId = recordId, Value = value };
 
-  public class CreateOperation : Operation {
-    [JsonPropertyName("value")]
-    public Dictionary<string, object> Value { get; set; } = new();
-  }
+  public static Operation Delete(string apiName, string recordId)
+      => new DeleteOperation { ApiName = apiName, RecordId = recordId };
+}
 
-  public class UpdateOperation : Operation {
-    [JsonPropertyName("record_id")]
-    public string RecordId { get; set; } = string.Empty;
+internal class CreateOperation : Operation {
+  [JsonPropertyName("value")]
+  public JsonObject Value { get; set; } = new();
+}
 
-    [JsonPropertyName("value")]
-    public Dictionary<string, object> Value { get; set; } = new();
-  }
+internal class UpdateOperation : Operation {
+  [JsonPropertyName("record_id")]
+  public string RecordId { get; set; } = string.Empty;
 
-  public class DeleteOperation : Operation {
-    [JsonPropertyName("record_id")]
-    public string RecordId { get; set; } = string.Empty;
-  }
+  [JsonPropertyName("value")]
+  public JsonObject Value { get; set; } = new();
+}
 
-  public class OperationJsonConverter : JsonConverter<Operation> {
-    [RequiresDynamicCode()]
-    [RequiresUnreferencedCode()]
-    public override Operation? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
-      if (reader.TokenType != JsonTokenType.StartObject)
-        throw new JsonException();
+internal class DeleteOperation : Operation {
+  [JsonPropertyName("record_id")]
+  public string RecordId { get; set; } = string.Empty;
+}
 
-      using (var doc = JsonDocument.ParseValue(ref reader)) {
-        var root = doc.RootElement;
-
-        if (root.TryGetProperty("Create", out var createElem)) {
-          return JsonSerializer.Deserialize<CreateOperation>(createElem.GetRawText(), options);
-        }
-        else if (root.TryGetProperty("Update", out var updateElem)) {
-          return JsonSerializer.Deserialize<UpdateOperation>(updateElem.GetRawText(), options);
-        }
-        else if (root.TryGetProperty("Delete", out var deleteElem)) {
-          return JsonSerializer.Deserialize<DeleteOperation>(deleteElem.GetRawText(), options);
-        }
-
-        throw new JsonException("Unknown operation type");
-      }
-    }
-
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
-    [RequiresDynamicCode()]
-    public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options) {
-      writer.WriteStartObject();
-
-      switch (value) {
-        case CreateOperation create:
-          writer.WritePropertyName("Create");
-          writer.WriteStartObject();
-          writer.WriteString("api_name", create.ApiName);
-          writer.WritePropertyName("value");
-          JsonSerializer.Serialize(writer, create.Value, options);
-          writer.WriteEndObject();
-          break;
-
-        case UpdateOperation update:
-          writer.WritePropertyName("Update");
-          writer.WriteStartObject();
-          writer.WriteString("api_name", update.ApiName);
-          writer.WriteString("record_id", update.RecordId);
-          writer.WritePropertyName("value");
-          JsonSerializer.Serialize(writer, update.Value, options);
-          writer.WriteEndObject();
-          break;
-
-        case DeleteOperation delete:
-          writer.WritePropertyName("Delete");
-          writer.WriteStartObject();
-          writer.WriteString("api_name", delete.ApiName);
-          writer.WriteString("record_id", delete.RecordId);
-          writer.WriteEndObject();
-          break;
-
-        default:
-          throw new JsonException($"Unknown operation type: {value.GetType()}");
-      }
-
-      writer.WriteEndObject();
+[RequiresDynamicCode("JSON serialization may require dynamic code")]
+[RequiresUnreferencedCode("JSON serialization may require unreferenced code")]
+internal class OperationJsonConverter : JsonConverter<Operation> {
+  public override Operation? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) {
+    using (var doc = JsonDocument.ParseValue(ref reader)) {
+      var root = doc.RootElement;
+      if (root.TryGetProperty("Create", out var createElem)) { return JsonSerializer.Deserialize<CreateOperation>(createElem.GetRawText(), options); }
+      if (root.TryGetProperty("Update", out var updateElem)) { return JsonSerializer.Deserialize<UpdateOperation>(updateElem.GetRawText(), options); }
+      if (root.TryGetProperty("Delete", out var deleteElem)) { return JsonSerializer.Deserialize<DeleteOperation>(deleteElem.GetRawText(), options); }
+      throw new JsonException("Unknown operation type");
     }
   }
 
-  public class TransactionRequest {
-    [System.Text.Json.Serialization.JsonPropertyName("operations")]
-    public List<Operation> Operations { get; set; } = new();
+  public override void Write(Utf8JsonWriter writer, Operation value, JsonSerializerOptions options) {
+    writer.WriteStartObject();
+
+    switch (value) {
+      case CreateOperation create:
+        writer.WritePropertyName("Create");
+        JsonSerializer.Serialize(writer, create, typeof(CreateOperation), options);
+        break;
+      case UpdateOperation update:
+        writer.WritePropertyName("Update");
+        JsonSerializer.Serialize(writer, update, typeof(UpdateOperation), options);
+        break;
+      case DeleteOperation delete:
+        writer.WritePropertyName("Delete");
+        JsonSerializer.Serialize(writer, delete, typeof(DeleteOperation), options);
+        break;
+      default:
+        throw new NotSupportedException($"Operation of type {value.GetType()} is not supported.");
+    }
+
+    writer.WriteEndObject();
+  }
+}
+
+internal class TransactionRequest {
+  [JsonPropertyName("operations")]
+  public List<Operation> Operations { get; set; } = new();
+}
+
+internal class TransactionResponse {
+  [JsonPropertyName("ids")]
+  public List<string> Ids { get; set; } = new();
+}
+
+/// <summary>Transaction</summary>
+public interface ITransactionBatch {
+  /// <summary>Api</summary>
+  IApiBatch Api(string apiName);
+
+  /// <summary>Send</summary>
+  [RequiresDynamicCode("JSON serialization may require dynamic code")]
+  [RequiresUnreferencedCode("JSON serialization may require unreferenced code")]
+  Task<List<string>> Send();
+}
+
+/// <summary>Api</summary>
+public interface IApiBatch {
+  /// <summary>Create</summary>
+  ITransactionBatch Create<T>(T record, JsonTypeInfo<T> jsonTypeInfo);
+  /// <summary>Update</summary>
+  ITransactionBatch Update<T>(RecordId recordId, T record, JsonTypeInfo<T> jsonTypeInfo);
+  /// <summary>Delete</summary>
+  ITransactionBatch Delete(RecordId recordId);
+}
+
+/// <summary>New transaction batch.</summary>
+public class TransactionBatch : ITransactionBatch {
+  private readonly Client _client;
+  private readonly List<Operation> _operations = new();
+
+  /// <inheritdoc/>
+  public TransactionBatch(Client client) {
+    _client = client;
   }
 
-  public class TransactionResponse {
-    [System.Text.Json.Serialization.JsonPropertyName("ids")]
-    public List<string> Ids { get; set; } = new();
+  /// <summary>Api.</summary>
+  public IApiBatch Api(string apiName) {
+    return new ApiBatch(this, apiName);
   }
 
-  public interface ITransactionBatch {
-    IApiBatch Api(string apiName);
-    Task<List<string>> SendAsync();
+  /// <summary>Send transaction batch.</summary>
+  [RequiresDynamicCode("JSON serialization may require dynamic code")]
+  [RequiresUnreferencedCode("JSON serialization may require unreferenced code")]
+  public async Task<List<string>> Send() {
+    var request = new TransactionRequest { Operations = _operations };
+    var response = await _client.Fetch(
+        "api/transaction/v1/execute",
+        HttpMethod.Post,
+        JsonContent.Create(request),
+        null
+    );
+
+    string json = await response.Content.ReadAsStringAsync();
+    var result = JsonSerializer.Deserialize<TransactionResponse>(json);
+
+    return result?.Ids ?? new List<string>();
   }
 
-  public interface IApiBatch {
-    ITransactionBatch Create(Dictionary<string, object> record);
-    ITransactionBatch Update(RecordId recordId, Dictionary<string, object> record);
-    ITransactionBatch Delete(RecordId recordId);
+  internal void AddOperation(Operation operation) {
+    _operations.Add(operation);
+  }
+}
+
+internal class ApiBatch : IApiBatch {
+  private readonly TransactionBatch _batch;
+  private readonly string _apiName;
+
+  public ApiBatch(TransactionBatch batch, string apiName) {
+    _batch = batch;
+    _apiName = apiName;
   }
 
-  public class TransactionBatch : ITransactionBatch {
-    private readonly Client _client;
-    private readonly List<Operation> _operations = new();
-
-    public TransactionBatch(Client client) {
-      _client = client;
-    }
-
-    public IApiBatch Api(string apiName) {
-      return new ApiBatch(this, apiName);
-    }
-
-    [RequiresUnreferencedCode()]
-    [RequiresDynamicCode()]
-    [RequiresDynamicCode()]
-    public async Task<List<string>> SendAsync() {
-      var request = new TransactionRequest { Operations = _operations };
-      var response = await _client.Fetch(
-          "api/transaction/v1/execute",
-          HttpMethod.Post,
-          JsonContent.Create(request),
-          null
-      );
-
-      string json = await response.Content.ReadAsStringAsync();
-      var result = JsonSerializer.Deserialize<TransactionResponse>(json);
-
-      return result?.Ids ?? new List<string>();
-    }
-
-    internal void AddOperation(Operation operation) {
-      _operations.Add(operation);
-    }
+  public ITransactionBatch Create<T>(T record, JsonTypeInfo<T> jsonTypeInfo) {
+    var value = ToJsonObject(record, jsonTypeInfo);
+    _batch.AddOperation(Operation.Create(_apiName, value));
+    return _batch;
   }
 
-  public class ApiBatch : IApiBatch {
-    private readonly TransactionBatch _batch;
-    private readonly string _apiName;
+  public ITransactionBatch Update<T>(RecordId recordId, T record, JsonTypeInfo<T> jsonTypeInfo) {
+    var value = ToJsonObject(record, jsonTypeInfo);
+    _batch.AddOperation(Operation.Update(_apiName, recordId.ToString(), value));
+    return _batch;
+  }
 
-    public ApiBatch(TransactionBatch batch, string apiName) {
-      _batch = batch;
-      _apiName = apiName;
-    }
+  public ITransactionBatch Delete(RecordId recordId) {
+    _batch.AddOperation(Operation.Delete(_apiName, recordId.ToString()));
+    return _batch;
+  }
 
-    public ITransactionBatch Create(Dictionary<string, object> value) {
-      _batch.AddOperation(Operation.Create(_apiName, value));
-      return _batch;
-    }
+  // 4. Helper method now efficiently serializes to a node
+  private static JsonObject ToJsonObject<T>(T record, JsonTypeInfo<T> jsonTypeInfo) {
+    // This is a direct, one-step conversion from a typed object to an in-memory JSON DOM.
+    var node = JsonSerializer.SerializeToNode(record, jsonTypeInfo);
 
-    public ITransactionBatch Update(RecordId recordId, Dictionary<string, object> value) {
-      _batch.AddOperation(Operation.Update(_apiName, recordId.ToString(), value));
-      return _batch;
-    }
-
-    public ITransactionBatch Delete(RecordId recordId) {
-      _batch.AddOperation(Operation.Delete(_apiName, recordId.ToString()));
-      return _batch;
-    }
+    // Ensure we actually have an object, not "null" or an array
+    return node as JsonObject ?? throw new InvalidOperationException("The provided record did not serialize to a JSON object.");
   }
 }
