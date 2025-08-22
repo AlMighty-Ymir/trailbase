@@ -1,0 +1,66 @@
+import pytest
+from unittest.mock import Mock, MagicMock
+from trailbase import Client, TransactionBatch, RecordId, record_ids_from_json
+
+
+def test_transaction_send_serialization():
+    # Create a mock HTTP client
+    mock_http_client = Mock()
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"ids": ["test-id-1", "test-id-2"]}
+
+    # Create client with mocked HTTP client
+    client = Client("http://localhost:4000", http_client=mock_http_client)
+    client._client.fetch = Mock(return_value=mock_response)
+
+    # Create transaction batch and add operations
+    batch = client.transaction()
+    batch.api("test_table").create({"name": "test"})
+    batch.api("test_table").update("existing-id", {"name": "updated"})
+
+    # Call send() - this will use the mocked response
+    result = batch.send()
+
+    # Verify the result
+    assert len(result) == 2
+    assert isinstance(result[0], RecordId)
+    assert result[0].id == "test-id-1"
+    assert result[1].id == "test-id-2"
+
+    # Verify the request was properly serialized
+    client._client.fetch.assert_called_once()
+    call_args = client._client.fetch.call_args
+    assert call_args[1]["method"] == "POST"
+    assert (
+        call_args[1]["data"]
+        == '{"operations": [{"Create": {"api_name": "test_table", "value": {"name": "test"}}}, {"Update": {"api_name": "test_table", "record_id": "existing-id", "value": {"name": "updated"}}}]}'
+        is not None
+    )
+
+
+def test_transaction_operations_serialization():
+    client = Client("http://localhost:4000")
+    batch = client.transaction()
+
+    # Add operations
+    batch.api("test_table").create({"name": "test"})
+    batch.api("test_table").update(RecordId("123"), {"name": "updated"})
+    batch.api("test_table").delete("456")
+
+    # Check the serialized operations
+    serialized_ops = [dict(op) for op in batch._operations]
+
+    assert len(serialized_ops) == 3
+    assert serialized_ops[0]["Create"]["api_name"] == "test_table"
+    assert serialized_ops[1]["Update"]["record_id"] == "123"
+    assert serialized_ops[2]["Delete"]["record_id"] == "456"
+
+
+def test_response_processing():
+    mock_response = {"ids": ["id1", "id2", "id3"]}
+    result = record_ids_from_json(mock_response)
+
+    assert len(result) == 3
+    assert all(isinstance(rid, RecordId) for rid in result)
+    assert result[0].id == "id1"

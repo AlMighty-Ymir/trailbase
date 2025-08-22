@@ -419,7 +419,7 @@ async fn transaction_tests() {
   let client = connect().await;
   let api = client.records("simple_strict_table");
   let now = now();
-  let mut ids = vec![];
+  let ids;
 
   {
     let mut batch = client.transaction();

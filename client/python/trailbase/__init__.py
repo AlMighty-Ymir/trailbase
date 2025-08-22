@@ -326,19 +326,15 @@ class TransactionBatch:
         return ApiBatch(self, api_name)
 
     def send(self) -> List[RecordId]:
-        serialized_ops = [dict(op) for op in self._operations]
-        request: JSON = {"operations": serialized_ops}
+        ops_json = [dict(op) for op in self._operations]
+
         response = self._client.fetch(
-            "api/transaction/v1/execute",
-            method="POST",
-            data=request,
+            "api/transaction/v1/execute", method="POST", data=json.dumps({"operations": ops_json})
         )
         if response.status_code != 200:
             raise Exception(f"Transaction failed with status code {response.status_code}: {response.text}")
 
-        result: TransactionResponse = response.json()
-        ids_dict: JSON_OBJECT = {"ids": result["ids"]}
-        return record_ids_from_json(ids_dict)
+        return record_ids_from_json(response.json())
 
     def add_operation(self, operation: Operation) -> None:
         """Add an operation to the batch."""

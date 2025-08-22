@@ -28,6 +28,7 @@
 
     #
     pkgs.python313
+    pkgs.poetry
     pkgs.dart
     pkgs.go
     pkgs.dotnet-sdk_9
