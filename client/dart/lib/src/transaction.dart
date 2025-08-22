@@ -50,7 +50,7 @@ class UpdateOperation {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data['api_name'] = apiName;
-    data['record_id'] = recordId;
+    data['record_id'] = recordId.toString();
     data['value'] = value;
     return data;
   }
@@ -65,7 +65,7 @@ class DeleteOperation {
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> data = {};
     data['api_name'] = apiName;
-    data['record_id'] = recordId;
+    data['record_id'] = recordId.toString();
     return data;
   }
 }
