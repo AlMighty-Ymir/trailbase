@@ -94,6 +94,8 @@ abstract class IApiBatch {
 }
 
 class TransactionBatch implements ITransactionBatch {
+  static const String _transactionApi = 'api/transaction/v1/execute';
+
   final Client _client;
   final List<Operation> _operations = [];
 
@@ -108,7 +110,7 @@ class TransactionBatch implements ITransactionBatch {
   Future<List<RecordId>> send() async {
     final request = TransactionRequest(operations: _operations);
     final response = await _client.fetch(
-      'api/transaction/v1/execute',
+      TransactionBatch._transactionApi,
       method: 'POST',
       data: request.toJson(),
     );
