@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use trailbase_client::{
   Client, CompareOp, DbEvent, Filter, ListArguments, ListResponse, Pagination, ReadArguments,
-  Operation, TransactionBatch,
 };
 
 struct Server {
@@ -428,7 +427,7 @@ async fn transaction_tests() {
     batch
       .api("simple_strict_table")
       .create(json!({"text_not_null": message}));
-    let ids = batch.send().await.unwrap();
+    ids = batch.send().await.unwrap();
     assert_eq!(ids.len(), 1);
 
     let record: SimpleStrict = api.read(&ids[0]).await.unwrap();
