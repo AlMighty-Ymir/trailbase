@@ -734,7 +734,7 @@ impl TransactionBatch {
     }
   }
 
-  pub fn api(&mut self, api_name: impl Into<String>) -> ApiBatch {
+  pub fn api(&mut self, api_name: impl Into<String>) -> ApiBatch<'_> {
     ApiBatch {
       batch: self,
       api_name: api_name.into(),
