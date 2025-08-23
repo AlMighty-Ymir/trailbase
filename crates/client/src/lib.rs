@@ -975,7 +975,7 @@ async fn json<T: DeserializeOwned>(resp: reqwest::Response) -> Result<T, Error> 
 
 const AUTH_API: &str = "api/auth/v1";
 const RECORD_API: &str = "api/records/v1";
-const TRANSACTION_API: &str = "api/transaction/v1/execute";
+const TRANSACTION_API: &str = "/api/transaction/v1/execute";
 
 #[cfg(test)]
 mod tests {
