@@ -748,12 +748,7 @@ impl TransactionBatch {
 
     let response = self
       .client
-      .fetch(
-        TRANSACTION_API,
-        Method::POST,
-        Some(&request),
-        None,
-      )
+      .fetch(TRANSACTION_API, Method::POST, Some(&request), None)
       .await?;
 
     let result: TransactionResponse = json(response).await?;

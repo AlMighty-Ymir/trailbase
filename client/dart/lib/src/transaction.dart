@@ -159,7 +159,8 @@ class ApiBatch implements IApiBatch {
   @override
   ITransactionBatch delete(RecordId recordId) {
     _batch._addOperation(
-      Operation(delete: _DeleteOperation(apiName: _apiName, recordId: recordId)),
+      Operation(
+          delete: _DeleteOperation(apiName: _apiName, recordId: recordId)),
     );
     return _batch;
   }
