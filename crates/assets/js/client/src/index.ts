@@ -540,7 +540,7 @@ export interface Client {
   /// Excute a batch query.
   execute(
     operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
-    options?: { transaction?: boolean },
+    transaction?: boolean,
   ): Promise<(string | number)[]>;
 }
 
@@ -602,11 +602,11 @@ class ClientImpl implements Client {
   /// Excute a batch query.
   async execute(
     operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
-    options: { transaction?: boolean } = { transaction: true },
+    transaction: boolean = true,
   ): Promise<(string | number)[]> {
     const response = await this.fetch(transactionApiBasePath, {
       method: "POST",
-      body: JSON.stringify({ operations, options }),
+      body: JSON.stringify({ operations, transaction }),
       headers: jsonContentTypeHeader,
     });
 

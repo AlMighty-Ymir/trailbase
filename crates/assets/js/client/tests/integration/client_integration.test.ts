@@ -84,7 +84,7 @@ test("Record integration tests", async () => {
         api.create({ text_not_null: "ts bulk create 0" }),
         api.create({ text_not_null: "ts bulk create 1" }),
       ],
-      { transaction: false },
+      false,
     );
     expect(bulkIds.length).toBe(2);
   }

@@ -191,30 +191,38 @@ pub async fn record_transactions_handler(
   let ids = if request.transaction.unwrap_or(true) {
     state
       .conn()
-      .call(move |conn: &mut rusqlite::Connection| {
-        let tx = conn.transaction()?;
-        let mut ids: Vec<String> = vec![];
-        for op in operations {
-          if let Some(id) = op(&tx)? {
-            ids.push(id);
+      .call(
+        move |conn: &mut rusqlite::Connection| -> Result<Vec<String>, trailbase_sqlite::Error> {
+          let tx = conn.transaction()?;
+
+          let mut ids: Vec<String> = vec![];
+          for op in operations {
+            if let Some(id) = op(&tx).map_err(|err| trailbase_sqlite::Error::Other(err.into()))? {
+              ids.push(id);
+            }
           }
-        }
-        tx.commit()?;
-        Ok(ids)
-      })
+
+          tx.commit()?;
+
+          return Ok(ids);
+        },
+      )
       .await?
   } else {
-    let mut ids: Vec<String> = vec![];
-    for op in operations {
-      let result = state
-        .conn()
-        .call(move |conn: &mut rusqlite::Connection| op(conn))
-        .await?;
-      if let Some(id) = result {
-        ids.push(id);
-      }
-    }
-    ids
+    state
+      .conn()
+      .call(
+        move |conn: &mut rusqlite::Connection| -> Result<Vec<String>, trailbase_sqlite::Error> {
+          let mut ids: Vec<String> = vec![];
+          for op in operations {
+            if let Some(id) = op(conn).map_err(|err| trailbase_sqlite::Error::Other(err.into()))? {
+              ids.push(id);
+            }
+          }
+          return Ok(ids);
+        },
+      )
+      .await?
   };
 
   return Ok(Json(TransactionResponse { ids }));
@@ -314,6 +322,7 @@ mod tests {
             value: json!({"value": 2}),
           },
         ],
+        transaction: None,
       }),
     )
     .await
@@ -330,11 +339,13 @@ mod tests {
             api_name: "test_api".to_string(),
             record_id: response.ids[0].clone(),
           },
-          Operation::Create {
+          Operation::Update {
             api_name: "test_api".to_string(),
+            record_id: response.ids[1].clone(),
             value: json!({"value": 3}),
           },
         ],
+        transaction: None,
       }),
     )
     .await
