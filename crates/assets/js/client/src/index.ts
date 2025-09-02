@@ -344,7 +344,28 @@ export class ListOperation<T = Record<string, unknown>>
     const expand = this.opts?.expand;
     if (expand) params.append("expand", expand.join(","));
 
-    function traverseFilters(path: string, filter: FilterOrComposite) {}
+    function traverseFilters(path: string, filter: FilterOrComposite) {
+      if ("and" in filter) {
+        for (const [i, f] of (filter as And).and.entries()) {
+          traverseFilters(`${path}[$and][${i}]`, f);
+        }
+      } else if ("or" in filter) {
+        for (const [i, f] of (filter as Or).or.entries()) {
+          traverseFilters(`${path}[$or][${i}]`, f);
+        }
+      } else {
+        const f = filter as Filter;
+        const op = f.op;
+        if (op) {
+          params.append(
+            `${path}[${f.column}][${formatCompareOp(op)}]`,
+            f.value,
+          );
+        } else {
+          params.append(`${path}[${f.column}]`, f.value);
+        }
+      }
+    }
 
     const filters = this.opts?.filters;
     if (filters) {
@@ -516,7 +537,7 @@ export interface Client {
   /// Unlike native fetch, will throw in case !response.ok.
   fetch(path: string, init?: FetchOptions): Promise<Response>;
 
-  /// Excute a new batch query.
+  /// Excute a batch query.
   execute(
     operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
     options?: { transaction?: boolean },
@@ -578,7 +599,7 @@ class ClientImpl implements Client {
     return new RecordApiImpl<T>(this, name);
   }
 
-  /// Excute a new batch query.
+  /// Excute a batch query.
   async execute(
     operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
     options: { transaction?: boolean } = { transaction: true },
@@ -884,80 +905,3 @@ export const exportedForTesting = isDev
       base64Encode,
     }
   : undefined;
-
-/// Batch Builder Class
-
-export interface TransactionRequest {
-  operations: Operation[];
-}
-
-export interface TransactionResponse {
-  ids: string[];
-}
-
-/// Batch Builder Class
-export class TransactionBatch {
-  private operations: Operation[] = [];
-
-  constructor(private client: Client) {}
-
-  api(apiName: string): ApiBatch {
-    return new ApiBatch(this, apiName);
-  }
-
-  async send(): Promise<string[]> {
-    const response = await this.client.fetch(transactionApiBasePath, {
-      method: "POST",
-      body: JSON.stringify({ operations: this.operations }),
-      headers: jsonContentTypeHeader,
-    });
-
-    return (await response.json()).ids;
-  }
-
-  addOperation(operation: Operation): void {
-    this.operations.push(operation);
-  }
-}
-
-// Api-Specific Operations
-export class ApiBatch {
-  constructor(
-    private batch: TransactionBatch,
-    private apiName: string,
-  ) {}
-
-  create(value: Record<string, unknown>): TransactionBatch {
-    this.batch.addOperation({
-      Create: {
-        api_name: this.apiName,
-        value: value,
-      },
-    });
-    return this.batch;
-  }
-
-  update(
-    recordId: string | number,
-    value: Record<string, unknown>,
-  ): TransactionBatch {
-    this.batch.addOperation({
-      Update: {
-        api_name: this.apiName,
-        record_id: `${recordId}`,
-        value: value,
-      },
-    });
-    return this.batch;
-  }
-
-  delete(recordId: string | number): TransactionBatch {
-    this.batch.addOperation({
-      Delete: {
-        api_name: this.apiName,
-        record_id: `${recordId}`,
-      },
-    });
-    return this.batch;
-  }
-}
