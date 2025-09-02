@@ -374,7 +374,7 @@ test("transaction tests", async () => {
     const updatedRecord = {
       text_not_null: `ts transaction update test modified: =?&${now}`,
     };
-    await client.execute([api.update(id, record)]);
+    await client.execute([api.update(id, updatedRecord)]);
 
     const readRecord = await api.read(id).query();
     expect(readRecord.text_not_null).toBe(updatedRecord.text_not_null);
