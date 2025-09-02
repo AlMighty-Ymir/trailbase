@@ -31,6 +31,7 @@ pub enum Operation {
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct TransactionRequest {
   operations: Vec<Operation>,
+  transaction: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
@@ -187,25 +188,34 @@ pub async fn record_transactions_handler(
     })
     .collect::<Result<Vec<_>, _>>()?;
 
-  let ids = state
-    .conn()
-    .call(
-      move |conn: &mut rusqlite::Connection| -> Result<Vec<String>, trailbase_sqlite::Error> {
+  let ids = if request.transaction.unwrap_or(true) {
+    state
+      .conn()
+      .call(move |conn: &mut rusqlite::Connection| {
         let tx = conn.transaction()?;
-
         let mut ids: Vec<String> = vec![];
         for op in operations {
-          if let Some(id) = op(&tx).map_err(|err| trailbase_sqlite::Error::Other(err.into()))? {
+          if let Some(id) = op(&tx)? {
             ids.push(id);
           }
         }
-
         tx.commit()?;
-
-        return Ok(ids);
-      },
-    )
-    .await?;
+        Ok(ids)
+      })
+      .await?
+  } else {
+    let mut ids: Vec<String> = vec![];
+    for op in operations {
+      let result = state
+        .conn()
+        .call(move |conn: &mut rusqlite::Connection| op(conn))
+        .await?;
+      if let Some(id) = result {
+        ids.push(id);
+      }
+    }
+    ids
+  };
 
   return Ok(Json(TransactionResponse { ids }));
 }

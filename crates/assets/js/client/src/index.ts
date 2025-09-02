@@ -186,6 +186,180 @@ export type Or = {
 
 export type FilterOrComposite = Filter | And | Or;
 
+export interface Operation {
+  Create?: {
+    api_name: string;
+    value: Record<string, unknown>;
+  };
+  Update?: {
+    api_name: string;
+    record_id: string | number;
+    value: Record<string, unknown>;
+  };
+  Delete?: {
+    api_name: string;
+    record_id: string | number;
+  };
+}
+
+export interface DeferredOperation<ResponseType> {
+  query(): Promise<ResponseType>;
+}
+
+export interface DeferredMutation<ResponseType>
+  extends DeferredOperation<ResponseType> {
+  toJSON(): Operation;
+}
+
+export class CreateOperation<T = Record<string, unknown>>
+  implements DeferredMutation<string | number>
+{
+  constructor(
+    private readonly client: Client,
+    private readonly apiName: string,
+    private readonly record: Partial<T>,
+  ) {}
+  async query(): Promise<string> {
+    const response = await this.client.fetch(
+      `${recordApiBasePath}/${this.apiName}`,
+      {
+        method: "POST",
+        body: JSON.stringify(this.record),
+        headers: jsonContentTypeHeader,
+      },
+    );
+
+    return (await response.json()).ids[0];
+  }
+  toJSON(): Operation {
+    return {
+      Create: {
+        api_name: this.apiName,
+        value: this.record,
+      },
+    };
+  }
+}
+
+export class UpdateOperation<T = Record<string, unknown>>
+  implements DeferredMutation<void>
+{
+  constructor(
+    private readonly client: Client,
+    private readonly apiName: string,
+    private readonly id: string | number,
+    private readonly record: Partial<T>,
+  ) {}
+  async query(): Promise<void> {
+    await this.client.fetch(`${recordApiBasePath}/${this.apiName}/${this.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(this.record),
+      headers: jsonContentTypeHeader,
+    });
+  }
+  toJSON(): Operation {
+    return {
+      Update: {
+        api_name: this.apiName,
+        record_id: this.id,
+        value: this.record,
+      },
+    };
+  }
+}
+
+export class DeleteOperation implements DeferredMutation<void> {
+  constructor(
+    private readonly client: Client,
+    private readonly apiName: string,
+    private readonly id: string | number,
+  ) {}
+  async query(): Promise<void> {
+    await this.client.fetch(`${recordApiBasePath}/${this.apiName}/${this.id}`, {
+      method: "DELETE",
+    });
+  }
+  toJSON(): Operation {
+    return {
+      Delete: {
+        api_name: this.apiName,
+        record_id: this.id,
+      },
+    };
+  }
+}
+
+export class ReadOperation<T = Record<string, unknown>>
+  implements DeferredOperation<T>
+{
+  constructor(
+    private readonly client: Client,
+    private readonly apiName: string,
+    private readonly id: string | number,
+    private readonly opt?: { expand?: string[] },
+  ) {}
+  async query(): Promise<T> {
+    const expand = this.opt?.expand;
+    const response = await this.client.fetch(
+      expand
+        ? `${recordApiBasePath}/${this.apiName}/${this.id}?expand=${expand.join(",")}`
+        : `${recordApiBasePath}/${this.apiName}/${this.id}`,
+    );
+    return (await response.json()) as T;
+  }
+}
+
+export class ListOperation<T = Record<string, unknown>>
+  implements DeferredOperation<ListResponse<T>>
+{
+  constructor(
+    private readonly client: Client,
+    private readonly apiName: string,
+    private readonly opts?: {
+      pagination?: Pagination;
+      order?: string[];
+      filters?: FilterOrComposite[];
+      count?: boolean;
+      expand?: string[];
+    },
+  ) {}
+  async query(): Promise<ListResponse<T>> {
+    const params = new URLSearchParams();
+    const pagination = this.opts?.pagination;
+    if (pagination) {
+      const cursor = pagination.cursor;
+      if (cursor) params.append("cursor", cursor);
+
+      const limit = pagination.limit;
+      if (limit) params.append("limit", limit.toString());
+
+      const offset = pagination.offset;
+      if (offset) params.append("offset", offset.toString());
+    }
+    const order = this.opts?.order;
+    if (order) params.append("order", order.join(","));
+
+    if (this.opts?.count) params.append("count", "true");
+
+    const expand = this.opts?.expand;
+    if (expand) params.append("expand", expand.join(","));
+
+    function traverseFilters(path: string, filter: FilterOrComposite) {}
+
+    const filters = this.opts?.filters;
+    if (filters) {
+      for (const filter of filters) {
+        traverseFilters("filter", filter);
+      }
+    }
+
+    const response = await this.client.fetch(
+      `${recordApiBasePath}/${this.apiName}?${params}`,
+    );
+    return (await response.json()) as ListResponse<T>;
+  }
+}
+
 export interface RecordApi<T = Record<string, unknown>> {
   list(opts?: {
     pagination?: Pagination;
@@ -193,21 +367,20 @@ export interface RecordApi<T = Record<string, unknown>> {
     filters?: FilterOrComposite[];
     count?: boolean;
     expand?: string[];
-  }): Promise<ListResponse<T>>;
+  }): ListOperation<T>;
 
   read(
     id: string | number,
     opt?: {
       expand?: string[];
     },
-  ): Promise<T>;
+  ): ReadOperation<T>;
 
-  create(record: T): Promise<string | number>;
-  createBulk(records: T[]): Promise<(string | number)[]>;
+  create(record: T): CreateOperation<T>;
 
-  update(id: string | number, record: Partial<T>): Promise<void>;
+  update(id: string | number, record: Partial<T>): UpdateOperation;
 
-  delete(id: string | number): Promise<void>;
+  delete(id: string | number): DeleteOperation;
 
   subscribe(id: string | number): Promise<ReadableStream<Event>>;
 }
@@ -225,121 +398,35 @@ export class RecordApiImpl<T = Record<string, unknown>>
     this._path = `${recordApiBasePath}/${this.name}`;
   }
 
-  public async list<T = Record<string, unknown>>(opts?: {
+  public list(opts?: {
     pagination?: Pagination;
     order?: string[];
     filters?: FilterOrComposite[];
     count?: boolean;
     expand?: string[];
-  }): Promise<ListResponse<T>> {
-    const params = new URLSearchParams();
-    const pagination = opts?.pagination;
-    if (pagination) {
-      const cursor = pagination.cursor;
-      if (cursor) params.append("cursor", cursor);
-
-      const limit = pagination.limit;
-      if (limit) params.append("limit", limit.toString());
-
-      const offset = pagination.offset;
-      if (offset) params.append("offset", offset.toString());
-    }
-    const order = opts?.order;
-    if (order) params.append("order", order.join(","));
-
-    if (opts?.count) params.append("count", "true");
-
-    const expand = opts?.expand;
-    if (expand) params.append("expand", expand.join(","));
-
-    function traverseFilters(path: string, filter: FilterOrComposite) {
-      if ("and" in filter) {
-        for (const [i, f] of (filter as And).and.entries()) {
-          traverseFilters(`${path}[$and][${i}]`, f);
-        }
-      } else if ("or" in filter) {
-        for (const [i, f] of (filter as Or).or.entries()) {
-          traverseFilters(`${path}[$or][${i}]`, f);
-        }
-      } else {
-        const f = filter as Filter;
-        const op = f.op;
-        if (op) {
-          params.append(
-            `${path}[${f.column}][${formatCompareOp(op)}]`,
-            f.value,
-          );
-        } else {
-          params.append(`${path}[${f.column}]`, f.value);
-        }
-      }
-    }
-
-    const filters = opts?.filters;
-    if (filters) {
-      for (const filter of filters) {
-        traverseFilters("filter", filter);
-      }
-    }
-
-    const response = await this.client.fetch(`${this._path}?${params}`);
-    return (await response.json()) as ListResponse<T>;
+  }): ListOperation<T> {
+    return new ListOperation<T>(this.client, this.name, opts);
   }
 
-  public async read<T = Record<string, unknown>>(
+  public read(
     id: string | number,
     opt?: {
       expand?: string[];
     },
-  ): Promise<T> {
-    const expand = opt?.expand;
-    const response = await this.client.fetch(
-      expand
-        ? `${this._path}/${id}?expand=${expand.join(",")}`
-        : `${this._path}/${id}`,
-    );
-    return (await response.json()) as T;
+  ): ReadOperation<T> {
+    return new ReadOperation<T>(this.client, this.name, id, opt);
   }
 
-  public async create<T = Record<string, unknown>>(
-    record: T,
-  ): Promise<string | number> {
-    const response = await this.client.fetch(this._path, {
-      method: "POST",
-      body: JSON.stringify(record),
-      headers: jsonContentTypeHeader,
-    });
-
-    return (await response.json()).ids[0];
+  public create(record: T): CreateOperation<T> {
+    return new CreateOperation<T>(this.client, this.name, record);
   }
 
-  public async createBulk<T = Record<string, unknown>>(
-    records: T[],
-  ): Promise<(string | number)[]> {
-    const response = await this.client.fetch(this._path, {
-      method: "POST",
-      body: JSON.stringify(records),
-      headers: jsonContentTypeHeader,
-    });
-
-    return (await response.json()).ids;
+  public update(id: string | number, record: Partial<T>): UpdateOperation<T> {
+    return new UpdateOperation<T>(this.client, this.name, id, record);
   }
 
-  public async update<T = Record<string, unknown>>(
-    id: string | number,
-    record: Partial<T>,
-  ): Promise<void> {
-    await this.client.fetch(`${this._path}/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(record),
-      headers: jsonContentTypeHeader,
-    });
-  }
-
-  public async delete(id: string | number): Promise<void> {
-    await this.client.fetch(`${this._path}/${id}`, {
-      method: "DELETE",
-    });
+  public delete(id: string | number): DeleteOperation {
+    return new DeleteOperation(this.client, this.name, id);
   }
 
   public async subscribe(id: string | number): Promise<ReadableStream<Event>> {
@@ -428,6 +515,12 @@ export interface Client {
   ///
   /// Unlike native fetch, will throw in case !response.ok.
   fetch(path: string, init?: FetchOptions): Promise<Response>;
+
+  /// Excute a new batch query.
+  execute(
+    operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
+    options?: { transaction?: boolean },
+  ): Promise<(string | number)[]>;
 }
 
 /// Client for interacting with TrailBase auth and record APIs.
@@ -483,6 +576,20 @@ class ClientImpl implements Client {
   /// Construct accessor for Record API with given name.
   public records<T = Record<string, unknown>>(name: string): RecordApi<T> {
     return new RecordApiImpl<T>(this, name);
+  }
+
+  /// Excute a new batch query.
+  async execute(
+    operations: (CreateOperation | UpdateOperation | DeleteOperation)[],
+    options: { transaction?: boolean } = { transaction: true },
+  ): Promise<(string | number)[]> {
+    const response = await this.fetch(transactionApiBasePath, {
+      method: "POST",
+      body: JSON.stringify({ operations, options }),
+      headers: jsonContentTypeHeader,
+    });
+
+    return (await response.json()).ids;
   }
 
   public avatarUrl(userId?: string): string | undefined {
@@ -681,6 +788,7 @@ export async function initClientFromCookies(
 
 const recordApiBasePath = "/api/records/v1";
 const authApiBasePath = "/api/auth/v1";
+const transactionApiBasePath = "/api/transaction/v1/execute";
 
 export function filePath(
   apiName: string,
@@ -776,3 +884,80 @@ export const exportedForTesting = isDev
       base64Encode,
     }
   : undefined;
+
+/// Batch Builder Class
+
+export interface TransactionRequest {
+  operations: Operation[];
+}
+
+export interface TransactionResponse {
+  ids: string[];
+}
+
+/// Batch Builder Class
+export class TransactionBatch {
+  private operations: Operation[] = [];
+
+  constructor(private client: Client) {}
+
+  api(apiName: string): ApiBatch {
+    return new ApiBatch(this, apiName);
+  }
+
+  async send(): Promise<string[]> {
+    const response = await this.client.fetch(transactionApiBasePath, {
+      method: "POST",
+      body: JSON.stringify({ operations: this.operations }),
+      headers: jsonContentTypeHeader,
+    });
+
+    return (await response.json()).ids;
+  }
+
+  addOperation(operation: Operation): void {
+    this.operations.push(operation);
+  }
+}
+
+// Api-Specific Operations
+export class ApiBatch {
+  constructor(
+    private batch: TransactionBatch,
+    private apiName: string,
+  ) {}
+
+  create(value: Record<string, unknown>): TransactionBatch {
+    this.batch.addOperation({
+      Create: {
+        api_name: this.apiName,
+        value: value,
+      },
+    });
+    return this.batch;
+  }
+
+  update(
+    recordId: string | number,
+    value: Record<string, unknown>,
+  ): TransactionBatch {
+    this.batch.addOperation({
+      Update: {
+        api_name: this.apiName,
+        record_id: `${recordId}`,
+        value: value,
+      },
+    });
+    return this.batch;
+  }
+
+  delete(recordId: string | number): TransactionBatch {
+    this.batch.addOperation({
+      Delete: {
+        api_name: this.apiName,
+        record_id: `${recordId}`,
+      },
+    });
+    return this.batch;
+  }
+}
