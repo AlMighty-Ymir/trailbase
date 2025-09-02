@@ -341,7 +341,6 @@ mod tests {
           },
           Operation::Create {
             api_name: "test_api".to_string(),
-            record_id: response.ids[1].clone(),
             value: json!({"value": 3}),
           },
         ],
